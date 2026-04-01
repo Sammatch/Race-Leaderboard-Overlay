@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Race Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a12; color:#ddd; font-family:'Rajdhani',sans-serif; min-height:100vh; padding:20px; }
+
+h1 { font-family:'Black Ops One',cursive; font-size:20px; color:#ff6a00; letter-spacing:4px; text-align:center; margin-bottom:4px; text-shadow:0 0 20px rgba(255,106,0,.5); }
+.subtitle { text-align:center; font-size:12px; color:rgba(255,255,255,.3); letter-spacing:2px; margin-bottom:20px; }
+
+.section { margin-bottom:16px; }
+.section-label { font-family:'Black Ops One',cursive; font-size:9px; letter-spacing:3px; color:rgba(255,106,0,.7); margin-bottom:7px; }
+
+.lap-controls { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,106,0,.2); border-radius:8px; padding:10px 14px; }
+.lap-disp { font-family:'Black Ops One',cursive; font-size:26px; color:#ff6a00; min-width:44px; text-align:center; }
+.btn { cursor:pointer; border:none; border-radius:6px; font-family:'Black Ops One',cursive; transition:all .15s; user-select:none; }
+.btn:active { transform:scale(.95); }
+.btn-lap { width:36px; height:36px; font-size:18px; background:rgba(255,106,0,.2); color:#ff6a00; border:1px solid rgba(255,106,0,.4); }
+.btn-lap:hover { background:rgba(255,106,0,.35); }
+.total-wrap { display:flex; align-items:center; gap:8px; margin-left:auto; font-size:13px; color:rgba(255,255,255,.5); }
+.total-wrap input { width:50px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:5px; color:#fff; font-family:'Black Ops One',cursive; font-size:14px; text-align:center; padding:5px; }
+
+.racer-table { display:flex; flex-direction:column; gap:4px; }
+.racer-card { display:grid; grid-template-columns:30px 30px 1fr auto; align-items:center; gap:6px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-left:3px solid transparent; border-radius:7px; padding:7px 10px; transition:border-left-color .3s; }
+.racer-card[data-pos="1"]{border-left-color:#FFD700;}
+.racer-card[data-pos="2"]{border-left-color:#C0C0C0;}
+.racer-card[data-pos="3"]{border-left-color:#CD7F32;}
+.racer-card.is-dnf{opacity:.5;border-left-color:#444!important;}
+
+.pos-num { font-family:'Black Ops One',cursive; font-size:14px; text-align:center; color:rgba(255,255,255,.6); }
+.racer-card[data-pos="1"] .pos-num{color:#FFD700;}
+.racer-card[data-pos="2"] .pos-num{color:#C0C0C0;}
+.racer-card[data-pos="3"] .pos-num{color:#CD7F32;}
+
+.move-btns { display:flex; flex-direction:column; gap:2px; }
+.btn-move { width:24px; height:16px; font-size:9px; background:rgba(255,255,255,.08); color:rgba(255,255,255,.6); border:1px solid rgba(255,255,255,.1); border-radius:3px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.btn-move:hover { background:rgba(255,255,255,.18); color:#fff; }
+.btn-move:disabled { opacity:.2; cursor:default; }
+
+.name-input { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:5px; color:#fff; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; padding:4px 8px; width:100%; transition:border-color .2s; }
+.name-input:focus { outline:none; border-color:rgba(255,106,0,.5); }
+.is-dnf .name-input { text-decoration:line-through; color:#666; }
+
+.btn-dnf { padding:4px 9px; font-size:9px; cursor:pointer; background:rgba(255,40,40,.15); color:#ff4040; border:1px solid rgba(255,40,40,.35); border-radius:5px; font-family:'Black Ops One',cursive; letter-spacing:1px; transition:all .15s; }
+.btn-dnf:hover { background:rgba(255,40,40,.35); }
+.is-dnf .btn-dnf { background:rgba(100,255,100,.1); color:#55ff88; border-color:rgba(100,255,100,.3); }
+.is-dnf .btn-dnf:hover { background:rgba(100,255,100,.25); }
+
+.bottom-bar { display:flex; gap:10px; margin-top:14px; }
+.btn-reset { flex:1; padding:10px; font-size:11px; cursor:pointer; background:rgba(255,255,255,.05); color:rgba(255,255,255,.4); border:1px solid rgba(255,255,255,.1); border-radius:7px; font-family:'Black Ops One',cursive; letter-spacing:1px; transition:all .15s; }
+.btn-reset:hover { background:rgba(255,255,255,.1); color:#fff; }
+
+.status-bar { text-align:center; font-size:10px; color:#00ff88; font-family:'Black Ops One',cursive; letter-spacing:2px; margin-top:10px; height:16px; opacity:0; transition:opacity .3s; }
+.status-bar.show { opacity:1; }
+.status-bar.error { color:#ff4040; }
+</style>
+</head>
+<body>
+
+<h1>🏁 RACE CONTROL</h1>
+<div class="subtitle">CHANGES APPLY INSTANTLY TO OVERLAY</div>
+
+<div class="section">
+  <div class="section-label">RACE LAP</div>
+  <div class="lap-controls">
+    <button class="btn btn-lap" onclick="changeLap(-1)">−</button>
+    <div class="lap-disp" id="ad_lapDisp">1</div>
+    <button class="btn btn-lap" onclick="changeLap(1)">+</button>
+    <div class="total-wrap">
+      <span>/ Total:</span>
+      <input type="number" id="ad_totalLaps" value="5" min="1" max="99" onchange="updateTotalLaps()">
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">POSITIONS — ▲▼ SWAP · NAME · DNF</div>
+  <div class="racer-table" id="ad_table"></div>
+</div>
+
+<div class="bottom-bar">
+  <button class="btn btn-reset" onclick="resetAll()">↺ RESET ALL</button>
+  <button class="btn btn-reset" onclick="resetLaps()">↺ RESET LAPS</button>
+</div>
+<div class="status-bar" id="statusBar">● SYNCED</div>
+
+<script>
+const SUPABASE_URL = 'https://duwfkencovirjpjzthsb.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1d2ZrZW5jb3Zpcmpwanp0aHNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5OTQyMzUsImV4cCI6MjA5MDU3MDIzNX0.1NFOda1rNZZHzdaWnbHOT1EcI6_MH3akuNdc8s5tW38';
+let statusTimeout;
+let currentData = null;
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function defaultData(){
+  return {
+    lap:1, totalLaps:5,
+    racers: Array.from({length:10},(_,i)=>({id:i,name:`Racer ${i+1}`,dnf:false,pos:i+1}))
+  };
+}
+
+async function fetchData(){
+  const r = await fetch(SUPABASE_URL+'/rest/v1/race_state?id=eq.1&select=data',{
+    headers:{'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY}
+  });
+  const rows = await r.json();
+  if(rows&&rows[0]&&rows[0].data){
+    try{ return JSON.parse(rows[0].data); }catch(e){}
+  }
+  return defaultData();
+}
+
+async function saveData(data){
+  currentData = data;
+  const r = await fetch(SUPABASE_URL+'/rest/v1/race_state?id=eq.1',{
+    method:'PATCH',
+    headers:{'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body: JSON.stringify({data: JSON.stringify(data)})
+  });
+  if(r.ok){ flashStatus('● SYNCED', false); }
+  else { flashStatus('✕ SYNC ERROR', true); }
+  renderAdmin(data);
+}
+
+function flashStatus(msg, isError){
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = 'status-bar show' + (isError?' error':'');
+  clearTimeout(statusTimeout);
+  statusTimeout = setTimeout(()=>bar.classList.remove('show'), 2000);
+}
+
+function changeLap(delta){
+  const data = currentData;
+  data.lap = Math.max(1, Math.min(data.totalLaps, data.lap+delta));
+  saveData(data);
+}
+
+function updateTotalLaps(){
+  const data = currentData;
+  data.totalLaps = parseInt(document.getElementById('ad_totalLaps').value)||5;
+  saveData(data);
+}
+
+function moveRacer(id, dir){
+  const data = currentData;
+  const racer = data.racers.find(r=>r.id===id);
+  if(!racer||racer.dnf) return;
+  const sorted = [...data.racers].filter(r=>!r.dnf).sort((a,b)=>a.pos-b.pos);
+  const idx = sorted.findIndex(r=>r.id===id);
+  const swapIdx = idx+dir;
+  if(swapIdx<0||swapIdx>=sorted.length) return;
+  const swap = sorted[swapIdx];
+  [racer.pos,swap.pos]=[swap.pos,racer.pos];
+  saveData(data);
+}
+
+function toggleDNF(id){
+  const data = currentData;
+  const racer = data.racers.find(r=>r.id===id);
+  if(!racer) return;
+  racer.dnf = !racer.dnf;
+  if(racer.dnf){ racer.pos = 1000+racer.id; }
+  else{ const maxPos=Math.max(0,...data.racers.filter(r=>!r.dnf&&r.id!==id).map(r=>r.pos)); racer.pos=maxPos+1; }
+  saveData(data);
+}
+
+function updateName(id, value){
+  const data = currentData;
+  const racer = data.racers.find(r=>r.id===id);
+  if(!racer) return;
+  racer.name = value;
+  saveData(data);
+}
+
+function resetAll(){
+  if(!confirm('Reset everything?')) return;
+  saveData(defaultData());
+}
+
+function resetLaps(){
+  const data = currentData;
+  data.lap=1;
+  saveData(data);
+}
+
+function renderAdmin(data){
+  document.getElementById('ad_lapDisp').textContent = data.lap;
+  document.getElementById('ad_totalLaps').value = data.totalLaps;
+  const sorted = [...data.racers].sort((a,b)=>{
+    if(a.dnf&&!b.dnf)return 1;if(!a.dnf&&b.dnf)return -1;return a.pos-b.pos;
+  });
+  const table = document.getElementById('ad_table');
+  table.innerHTML='';
+  sorted.forEach((racer,idx)=>{
+    const dp = racer.dnf?'✕':(idx+1);
+    const card = document.createElement('div');
+    card.className='racer-card'+(racer.dnf?' is-dnf':'');
+    card.dataset.pos = racer.dnf?'dnf':(idx+1);
+    card.innerHTML=`
+      <div class="pos-num">${dp}</div>
+      <div class="move-btns">
+        <button class="btn-move" onclick="moveRacer(${racer.id},-1)" ${racer.dnf?'disabled':''}>▲</button>
+        <button class="btn-move" onclick="moveRacer(${racer.id},1)" ${racer.dnf?'disabled':''}>▼</button>
+      </div>
+      <input class="name-input" value="${esc(racer.name)}" oninput="updateName(${racer.id},this.value)" placeholder="Racer name" ${racer.dnf?'disabled':''}>
+      <button class="btn btn-dnf" onclick="toggleDNF(${racer.id})">${racer.dnf?'RESTORE':'DNF'}</button>
+    `;
+    table.appendChild(card);
+  });
+}
+
+// Init
+fetchData().then(data=>{
+  currentData = data;
+  renderAdmin(data);
+});
+</script>
+</body>
+</html>
